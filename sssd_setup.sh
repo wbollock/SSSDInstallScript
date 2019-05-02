@@ -6,11 +6,12 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 BLUE='\033[0;34m'
+YELLOW='\033[0;33m'
 BOLD="\033[1m"
-echo -e "${BLUE}Setting up SSSD. ${BOLD}Please run this program with sudo.${NC}"
-echo -e "${BLUE}${BOLD} Hit 'Enter' at all Ubuntu system prompts. Follow script prompts in ${NC}${RED}red${NC} closely."
+echo -e "${BLUE}${BOLD}Setting up SSSD. Please run this program with sudo.${NC}"
+echo -e "${BLUE}${BOLD} Hit 'Enter' at all Ubuntu system prompts. Follow script prompts in ${NC}${RED}red${NC} ${BLUE}${BOLD}closely.${NC}"
 #"here document" for use with ASCII art
-#used for chaning text color
+#used for chaning textYellow        1;33 color
 
 cat << "HelpDesk"
    _____ _____ _____   _    _      _       _____            _    
@@ -22,7 +23,7 @@ cat << "HelpDesk"
                                     | |                          
                                     |_|                      
 HelpDesk
-sleep (5)
+sleep 5
 read -r -n1 -p "$(echo -e $RED"(Recommended) Do you want to do a full system update? [y,n] "$NC)" doit 
 case $doit in  
   y|Y) 
@@ -57,7 +58,7 @@ if [ -e /etc/ldap.conf ]; then
 
 
 printf "\n"
-echo "Installing necessary programs - kerberos, samba, sssd, chrony"
+echo -e "${BLUE}Installing necessary programs - kerberos, samba, sssd, chrony${NC}"
 sleep 10
 
 sudo apt --yes --force-yes install krb5-user samba sssd chrony 
@@ -100,13 +101,11 @@ sudo systemctl restart smbd.service nmbd.service
 echo ""
 printf "${RED}Please enter your ADM FSUID you'd like to use when binding: ${NC}"
 read -r FSUID
-echo -e "${GREEN}Thank you. Creating a Kerberos ticket.${NC}"
-#Kerberos ticket creation - helps verify domain login issues/binding issues
-sudo kinit "$FSUID"
+
+
 echo -e "${RED}Please enter in your password again. Authenticating to domain...${NC}"
 sudo net ads join -U "$FSUID"@fsu.edu 
-#TODO: need something to retry binding if failed password
-echo "It's probably okay if you get an NT_STATUS_UNSUCCESSFUL error"
+echo -e "${YEllOW}It's OK if you get an NT_STATUS_UNSUCCESSFUL error. This does not affect binding.${NC}"
 sudo systemctl restart sssd.service 
 
 echo ""
@@ -117,6 +116,10 @@ printf "\n"
 printf "${RED}Please enter your ADM FSUID you'd like to use when binding: ${NC}"
 sudo net ads join -U "$FSUID"@fsu.edu 
 sudo systemctl restart sssd.service;
+#Kerberos ticket creation - helps verify domain login issues/binding issues
+echo -e "${GREEN}Thank you. Creating a Kerberos ticket. Not necessary for binding, but useful for debugging.${NC}"
+sudo kinit "$FSUID"
+printf "\n"
 done
 
 
@@ -144,9 +147,6 @@ echo -e "${BLUE}Have a nice day!${NC}"
 
 
 
-#TODO: update wiki with other config 
-# and additional files with <hidden> and </hidden>
-# y's only installatiin/purge
 # TODO:
 # do you have any users (or groups?!) to add to sudo
 # 203136909(gg-cci-helpdesk)
