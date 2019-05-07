@@ -64,7 +64,7 @@ sudo apt --yes --force-yes install krb5-user samba sssd chrony
 echo ""
 echo "Copying over all SSSD components"
 scp cci_admin2@capricorn.cci.fsu.edu:~/sssd/sssdFiles.tar.gz ~/sssdFiles.tar.gz
-
+#if this scp fails, the entire script fails
 echo "Unzipping .tar.gz..."
 tar -xzf sssdFiles.tar.gz
 
@@ -103,21 +103,28 @@ read -r FSUID
 
 echo -e "${RED}Please enter in your password again. Authenticating to domain...${NC}"
 sudo net ads join -U "$FSUID"@fsu.edu 
-echo -e "${YEllOW}It's OK if you get an NT_STATUS_UNSUCCESSFUL error. This does not affect binding.${NC}"
+echo -e "${YELLOW}It's OK if you get an NT_STATUS_UNSUCCESSFUL error. This does not affect binding.${NC}"
+echo -e "${YELLOW}However, a Logon Failure means the bindng has failed.${NC}"
 sudo systemctl restart sssd.service 
 
 echo ""
-read -r -n1 -p "$(echo -e $RED"Do you need to retry binding, for example a mistyped password(Logon failure)? [y,n] "$NC)" retry
-while [ $retry -ne 'y' ];
+# loops, if user had failed binding. not auto detect, manual
+while :
 do
-printf "\n"
-printf "${RED}Please enter your ADM FSUID you'd like to use when binding: ${NC}"
-sudo net ads join -U "$FSUID"@fsu.edu 
-sudo systemctl restart sssd.service;
-#Kerberos ticket creation - helps verify domain login issues/binding issues
-echo -e "${GREEN}Thank you. Creating a Kerberos ticket. Not necessary for binding, but useful for debugging.${NC}"
-sudo kinit "$FSUID"
-printf "\n"
+  read -r -n1 -p "$(echo -e $RED"Do you need to retry binding, for example a mistyped password(Logon failure)? [y,n] "$NC)" retry
+  if [ $retry = n ];
+  then
+  break
+  fi
+  printf "\n"
+  #printf "${RED}Please enter your ADM FSUID you'd like to use when binding: ${NC}"
+  sudo net ads join -U "$FSUID"@fsu.edu 
+  #uses same FSUID as before
+  sudo systemctl restart sssd.service;
+  #Kerberos ticket creation - helps verify domain login issues/binding issues
+  #echo -e "${GREEN}Thank you. Creating a Kerberos ticket. Not necessary for binding, but useful for debugging.${NC}"
+  #sudo kinit "$FSUID"
+  printf "\n"
 done
 
 
