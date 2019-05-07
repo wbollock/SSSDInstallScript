@@ -6,12 +6,12 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 BLUE='\033[0;34m'
-YELLOW='\033[0;33m'
 BOLD="\033[1m"
-echo -e "${BLUE}${BOLD}Setting up SSSD. Please run this program with sudo.${NC}"
-echo -e "${BLUE}${BOLD} Hit 'Enter' at all Ubuntu system prompts. Follow script prompts in ${NC}${RED}red${NC} ${BLUE}${BOLD}closely.${NC}"
+YELLOW='\033[0;33m'
+echo -e "${BLUE}Setting up SSSD. ${BOLD}Please run this program with sudo.${NC}"
+echo -e "${BLUE}${BOLD}**Hit 'Enter' at all Ubuntu system prompts**. Follow script prompts in ${NC}${RED}red${NC} ${BLUE}${BOLD}closely.${NC}"
 #"here document" for use with ASCII art
-#used for chaning textYellow        1;33 color
+#used for chaning text color
 
 cat << "HelpDesk"
    _____ _____ _____   _    _      _       _____            _    
@@ -59,8 +59,6 @@ if [ -e /etc/ldap.conf ]; then
 
 printf "\n"
 echo -e "${BLUE}Installing necessary programs - kerberos, samba, sssd, chrony${NC}"
-sleep 10
-
 sudo apt --yes --force-yes install krb5-user samba sssd chrony 
 
 echo ""
@@ -75,22 +73,22 @@ tar -xzf sssdFiles.tar.gz
 echo "Editing Kerberos setup, /etc/krb5.conf"
 sudo rm -f /etc/krb5.conf
 sudo mv ~/krb5.conf /etc/krb5.conf
-#scp cci_admin2@capricorn.cci.fsu.edu:~/sssd/krb5.conf /etc/krb5.conf
+
 echo "Kerberos is now setup. Replacing chrony.conf"
 sudo rm -f /etc/sssd/sssd.conf
 sudo mv ~/chrony.conf /etc/chrony/chrony.conf
-#scp cci_admin2@capricorn.cci.fsu.edu:~/sssd/chrony.conf /etc/chrony/chrony.conf
+
 
 echo "Installing Samba..."
 sudo mv ~/smb.conf /etc/samba/smb.conf
-#scp cci_admin2@capricorn.cci.fsu.edu:~/sssd/smb.conf /etc/samba/smb.conf
+
 
 echo "Onto SSSD.conf. Replacing and reuploading."
 sudo rm -f /etc/sssd/sssd.conf
 sudo mv ~/sssd.conf /etc/sssd/sssd.conf
-#scp cci_admin2@capricorn.cci.fsu.edu:~/sssd/sssd.conf /etc/sssd/sssd.conf
-#note that SSSD is the file you want to edit for changing who/what groups can log onto the server
-#see wiki page
+
+#note that sssd.conf is the file you want to edit for changing who/what groups can log onto the server
+
 echo "Changing permissions for sssd.conf"
 sudo chown root:root /etc/sssd/sssd.conf
 sudo chmod 600 /etc/sssd/sssd.conf
@@ -99,9 +97,9 @@ echo -e "${GREEN}Great, now we're ready to restart some services.${NC}"
 sudo systemctl restart chrony.service
 sudo systemctl restart smbd.service nmbd.service
 echo ""
+
 printf "${RED}Please enter your ADM FSUID you'd like to use when binding: ${NC}"
 read -r FSUID
-
 
 echo -e "${RED}Please enter in your password again. Authenticating to domain...${NC}"
 sudo net ads join -U "$FSUID"@fsu.edu 
@@ -124,36 +122,40 @@ done
 
 
 echo "Editing pam.d/common-session to create a user home directory upon first login"
-#sudo rm -f /etc/pam.d/common-session
 sudo mv ~/common-session /etc/pam.d/common-session
-#scp cci_admin2@capricorn.cci.fsu.edu:~/sssd/common-session /etc/pam.d/common-session
+
 
 echo "Overriding old nsswitch.conf"
 sudo mv ~/nsswitch.conf /etc/nsswitch.conf
-#scp cci_admin2@capricorn.cci.fsu.edu:~/sssd/nsswitch.conf /etc/nsswitch.conf
+
 
 echo "Running pam-auth-update to force SSSD usage, instead of LDAP"
 sudo pam-auth-update --force
 #user will just hit enter for this
+#BUG: sometimes hangs?
 
 echo ""
 echo -e "${GREEN}All done. Binding complete.${NC} Please test with:"
 echo "su - FSUID"
 printf "\n"
-echo "Finally, add users to sudo with:"
-echo "sudo usermod -aG sudo <username>"
-# add list of users to add to sudo
+echo -e "${RED}Adding ${BOLD}gg-cci-administrators${NC}${RED} to sudoers${NC}"
+# hard coded administrators in
+sudo -u root echo "%gg-cci-administrators ALL=(ALL)ALL" >> /etc/sudoers
+exit
+
 echo -e "${BLUE}Have a nice day!${NC}"
 
 
 
-# TODO:
-# do you have any users (or groups?!) to add to sudo
-# 203136909(gg-cci-helpdesk)
-# list of users, possibly seperated by comma
-# dynamic array 
+#TODO: update wiki with other config 
+# and additional files with <hidden> and </hidden>
+
+
 # TODO:
 # how to run bash commands remotely (update servers remotely)
+# get list of servers and have a script use those to then run command 
+#https://www.shellhacks.com/ssh-execute-remote-command-script-linux/
 # TESTING 
 # test without ldap
 # test w/ virtualmin and ldap
+# test running remote commands with the script and scp
