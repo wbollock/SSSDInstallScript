@@ -2,13 +2,17 @@
 # made by William Bollock, CCI Helpdesk, April 2019
 # check https://help.ubuntu.com/lts/serverguide/sssd-ad.html or the SSSD wiki page for more details
 # Purpose: setup SSSD for AD auth on Ubuntu servers (tested on 16.04)
+#SILENT VERSION OF SSSD SCRIPT FOR USAGE IN BULK
+#FLAGS TO DO:
+# y n web15c
+# telling it to upgrade, remove ldap, not retry binding, and then use the FSUID
 function upgrade {
   case $1 in  
   y|Y) 
-  sudo apt --yes --force-yes update
-  sudo apt --yes --force-yes upgrade
-  sudo apt --yes --force-yes dist-upgrade
-  sudo apt-get --yes --force-yes autoremove
+  sudo DEBIAN_FRONTEND=noninteractive apt --yes --force-yes update
+  sudo DEBIAN_FRONTEND=noninteractive apt --yes --force-yes upgrade
+  sudo DEBIAN_FRONTEND=noninteractive apt --yes --force-yes dist-upgrade
+  sudo DEBIAN_FRONTEND=noninteractive apt-get --yes --force-yes autoremove
   ;;
     n|N) 
     printf "\n"
@@ -36,6 +40,11 @@ function ldap {
 
 #command line arguments
 #./sssd.sh y n web15c
+doit=$1
+remove=$1
+retry=$2
+FSUID=$3
+
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -59,12 +68,11 @@ cat << "HelpDesk"
                                     |_|                      
 HelpDesk
 sleep 3
-read -r -n1 -p "$(echo -e $RED"(Recommended) Do you want to do a full system update? [y,n] "$NC)" doit 
+
 upgrade $doit
 
 #looking for ldap installations, if /etc/ldap.conf found, purges ldap related programs
 if [ -e /etc/ldap.conf ]; then
-    read -r -n1 -p "$(echo -e $RED"(Recommended) Found LDAP installation... do you want to remove any existing LDAP-auth installation? [y,n] "$NC)" remove
     ldap $remove
     else
     echo "LDAP installation not found. (etc/ldap.conf)"
@@ -114,7 +122,7 @@ sudo systemctl restart smbd.service nmbd.service
 echo ""
 
 printf "${RED}Please enter your ADM FSUID you'd like to use when binding: ${NC}"
-read -r FSUID
+
 
 echo -e "${RED}Please enter in your password again. Authenticating to domain...${NC}"
 sudo net ads join -U "$FSUID"@fsu.edu 
@@ -126,7 +134,6 @@ echo ""
 # loops, if user had failed binding. not auto detect, manual
 while :
 do
-  read -r -n1 -p "$(echo -e $RED"Do you need to retry binding, for example a mistyped password(Logon failure)? [y,n] "$NC)" retry
   if [ $retry = n ];
   then
   break
@@ -135,18 +142,16 @@ do
   #printf "${RED}Please enter your ADM FSUID you'd like to use when binding: ${NC}"
   sudo net ads join -U "$FSUID"@fsu.edu 
   #uses same FSUID as before
-  sudo systemctl restart sssd.service;
+  sudo systemctl restart sssd.service
   #Kerberos ticket creation - helps verify domain login issues/binding issues
   #echo -e "${GREEN}Thank you. Creating a Kerberos ticket. Not necessary for binding, but useful for debugging.${NC}"
   #sudo kinit "$FSUID"
   printf "\n"
 done
 
-printf "\n"
+
 echo "Editing pam.d/common-session to create a user home directory upon first login"
-#sudo mv ~/common-session /etc/pam.d/common-session
-#VIRTUALMIN BREAKS HERE!!!!
-# maybe get rid of this
+sudo mv ~/common-session /etc/pam.d/common-session
 
 
 echo "Overriding old nsswitch.conf"
@@ -178,5 +183,3 @@ sudo rm -rf sssd.sh
 # test without ldap
 # test w/ virtualmin and ldap
 # test running remote commands with the script and scp
-# make sure sssd_silent.sh and sssd_setup.sh are synced
-#VirtualMin worked - mio and web15c could login
