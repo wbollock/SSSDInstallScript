@@ -74,6 +74,7 @@ if [ -e /etc/ldap.conf ]; then
 printf "\n"
 echo -e "${BLUE}Installing necessary programs - kerberos, samba, sssd, chrony${NC}"
 sudo DEBIAN_FRONTEND=noninteractive apt --yes --force-yes install krb5-user samba sssd chrony 
+#DEBIAN_FRONTEND=noninteractive gets rid of the purple package management screen
 
 echo ""
 echo "Copying over all SSSD components"
@@ -123,30 +124,10 @@ echo -e "${YELLOW}However, a Logon Failure means the binding has failed.${NC}"
 sudo systemctl restart sssd.service 
 
 echo ""
-# loops, if user had failed binding. not auto detect, manual
-while :
-do
-  read -r -n1 -p "$(echo -e $RED"Do you need to retry binding, for example a mistyped password(Logon failure)? [y,n] "$NC)" retry
-  if [ $retry = n ];
-  then
-  break
-  fi
-  printf "\n"
-  #printf "${RED}Please enter your ADM FSUID you'd like to use when binding: ${NC}"
-  sudo net ads join -U "$FSUID"@fsu.edu 
-  #uses same FSUID as before
-  sudo systemctl restart sssd.service;
-  #Kerberos ticket creation - helps verify domain login issues/binding issues
-  #echo -e "${GREEN}Thank you. Creating a Kerberos ticket. Not necessary for binding, but useful for debugging.${NC}"
-  #sudo kinit "$FSUID"
-  printf "\n"
-done
+
 
 printf "\n"
-echo "Editing pam.d/common-session to create a user home directory upon first login"
-#sudo mv ~/common-session /etc/pam.d/common-session
-#VIRTUALMIN BREAKS HERE!!!!
-# maybe get rid of this
+
 
 
 echo "Overriding old nsswitch.conf"
@@ -158,6 +139,39 @@ sudo pam-auth-update --force
 #user will just hit enter for this
 #BUG: sometimes hangs?
 
+
+
+#automatic bind checker
+echo -e "${BLUE}Testing your bind with [id km12n]${NC}"
+# if the output of id km12n has a sufficient output, then binding works!
+var="$(id km12n)"
+id_array=("$var")
+id_array_length=${#id_array}
+if [ $id_array_length -gt 27 ]; then
+  #27 because id km12n that doesn't work is ~26 characters
+  echo -e "${RED}Bind ${BOLD}succeeded${NC}${RED}. id km12n returned sufficent length.${NC}"
+  else
+  echo -e "${RED}Bind ${BOLD}failed${NC}${RED}. id k12mn was too short.${NC}"
+fi
+
+while :
+do
+  read -r -n1 -p "$(echo -e $RED"Do you need to retry binding, for example a mistyped password(Logon failure)? [y,n] "$NC)" retry
+  if [ $retry = n ];
+  then
+  break
+  fi
+  printf "\n"
+  #printf "${RED}Please enter your ADM FSUID you'd like to use when binding: ${NC}"
+  sudo net ads join -U "$FSUID"@fsu.edu 
+  #uses same FSUID as before
+  sudo systemctl restart sssd.service
+  #Kerberos ticket creation - helps verify domain login issues/binding issues
+  #echo -e "${GREEN}Thank you. Creating a Kerberos ticket. Not necessary for binding, but useful for debugging.${NC}"
+  #sudo kinit "$FSUID"
+  printf "\n"
+done
+
 echo ""
 echo -e "${GREEN}All done. Binding complete.${NC} Please test with:"
 echo "su - FSUID"
@@ -166,6 +180,8 @@ echo -e "${RED}Adding ${BOLD}gg-cci-administrators${NC}${RED} to sudoers${NC}"
 # hard coded administrators in
 sudo -u root echo "%gg-cci-administrators ALL=(ALL)ALL" >> /etc/sudoers
 exit
+# will exit program if sudo not given to program originally
+
 
 echo -e "${BLUE}Have a nice day!${NC}"
 sudo rm -rf sssd.sh
@@ -173,10 +189,5 @@ sudo rm -rf sssd.sh
 # TODO:
 # how to run bash commands remotely (update servers remotely)
 # get list of servers and have a script use those to then run command 
-#https://www.shellhacks.com/ssh-execute-remote-command-script-linux/
-# TESTING 
-# test without ldap
-# test w/ virtualmin and ldap
-# test running remote commands with the script and scp
+# do lots of testing on both versions
 # make sure sssd_silent.sh and sssd_setup.sh are synced
-#VirtualMin worked - mio and web15c could login

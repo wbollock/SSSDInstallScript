@@ -38,7 +38,9 @@ function ldap {
 }
 
 
-#command line arguments
+#command line arguments for SILENT install version
+# regular one will not have these
+#example below
 #./sssd.sh y n web15c
 doit=$1
 remove=$1
@@ -87,6 +89,7 @@ echo ""
 echo "Copying over all SSSD components"
 scp cci_admin2@capricorn.cci.fsu.edu:~/sssd/sssdFiles.tar.gz ~/sssdFiles.tar.gz
 #if this scp fails, the entire script fails
+# try just
 echo "Unzipping .tar.gz..."
 tar -xzf sssdFiles.tar.gz
 
@@ -121,7 +124,7 @@ sudo systemctl restart chrony.service
 sudo systemctl restart smbd.service nmbd.service
 echo ""
 
-printf "${RED}Please enter your ADM FSUID you'd like to use when binding: ${NC}"
+
 
 
 echo -e "${RED}Please enter in your password again. Authenticating to domain...${NC}"
@@ -131,9 +134,39 @@ echo -e "${YELLOW}However, a Logon Failure means the binding has failed.${NC}"
 sudo systemctl restart sssd.service 
 
 echo ""
-# loops, if user had failed binding. not auto detect, manual
+
+
+printf "\n"
+
+
+
+echo "Overriding old nsswitch.conf"
+sudo mv ~/nsswitch.conf /etc/nsswitch.conf
+
+
+echo "Running pam-auth-update to force SSSD usage, instead of LDAP"
+sudo pam-auth-update --force
+#user will just hit enter for this
+#BUG: sometimes hangs?
+
+
+
+#automatic bind checker
+echo -e "${BLUE}Testing your bind with [id km12n]${NC}"
+# if the output of id km12n has a sufficient output, then binding works!
+var="$(id km12n)"
+id_array=("$var")
+id_array_length=${#id_array}
+if [ $id_array_length -gt 27 ]; then
+  #27 because id km12n that doesn't work is ~26 characters
+  echo -e "${RED}Bind ${BOLD}succeeded${NC}${RED}. id km12n returned sufficent length.${NC}"
+  else
+  echo -e "${RED}Bind ${BOLD}failed${NC}${RED}. id k12mn was too short.${NC}"
+fi
+
 while :
 do
+  read -r -n1 -p "$(echo -e $RED"Do you need to retry binding, for example a mistyped password(Logon failure)? [y,n] "$NC)" retry
   if [ $retry = n ];
   then
   break
@@ -149,20 +182,6 @@ do
   printf "\n"
 done
 
-
-echo "Editing pam.d/common-session to create a user home directory upon first login"
-sudo mv ~/common-session /etc/pam.d/common-session
-
-
-echo "Overriding old nsswitch.conf"
-sudo mv ~/nsswitch.conf /etc/nsswitch.conf
-
-
-echo "Running pam-auth-update to force SSSD usage, instead of LDAP"
-sudo pam-auth-update --force
-#user will just hit enter for this
-#BUG: sometimes hangs?
-
 echo ""
 echo -e "${GREEN}All done. Binding complete.${NC} Please test with:"
 echo "su - FSUID"
@@ -171,15 +190,8 @@ echo -e "${RED}Adding ${BOLD}gg-cci-administrators${NC}${RED} to sudoers${NC}"
 # hard coded administrators in
 sudo -u root echo "%gg-cci-administrators ALL=(ALL)ALL" >> /etc/sudoers
 exit
+# will exit program if sudo not given to program originally
+
 
 echo -e "${BLUE}Have a nice day!${NC}"
 sudo rm -rf sssd.sh
-
-# TODO:
-# how to run bash commands remotely (update servers remotely)
-# get list of servers and have a script use those to then run command 
-#https://www.shellhacks.com/ssh-execute-remote-command-script-linux/
-# TESTING 
-# test without ldap
-# test w/ virtualmin and ldap
-# test running remote commands with the script and scp
