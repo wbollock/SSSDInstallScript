@@ -149,7 +149,7 @@ id_array=("$var")
 id_array_length=${#id_array}
 if [ $id_array_length -gt 27 ]; then
   #27 because id km12n that doesn't work is ~26 characters
-  echo -e "${RED}Bind ${BOLD}succeeded${NC}${RED}. id km12n returned sufficent length.${NC}"
+  echo -e "${GREEN}Bind ${BOLD}succeeded${NC}${GREEN}. id km12n returned sufficent length.${NC}"
   else
   echo -e "${RED}Bind ${BOLD}failed${NC}${RED}. id k12mn was too short.${NC}"
 fi
