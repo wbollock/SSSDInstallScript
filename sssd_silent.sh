@@ -41,7 +41,7 @@ function ldap {
 #command line arguments for SILENT install version
 # regular one will not have these
 #example below
-#./sssd.sh y n web15c
+# sudo ./sssd.sh y n web15c
 doit=$1
 remove=$1
 retry=$2
