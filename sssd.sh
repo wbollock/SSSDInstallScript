@@ -186,8 +186,17 @@ exit
 echo -e "${BLUE}Have a nice day!${NC}"
 sudo rm -rf sssd.sh
 
+#echo -e "${BLUE} Would you like to reboot the server?${NC}"
+# if not, SCHEDULE A REBOOT
+## TODO:
+# ask if you'd like to reboot the server
+
 # TODO:
 # how to run bash commands remotely (update servers remotely)
 # get list of servers and have a script use those to then run command 
-# do lots of testing on both versions
 # make sure sssd_silent.sh and sssd_setup.sh are synced
+
+
+# EXISTING USER ACCOUNTS NEED HOME FOLDER PERMISSION SWITCHED:
+
+# sudo chown -R "web15c:domain users" /home/web15c/
