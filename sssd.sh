@@ -178,7 +178,7 @@ echo "su - FSUID"
 printf "\n"
 echo -e "${RED}Adding ${BOLD}gg-cci-administrators${NC}${RED} to sudoers${NC}"
 # hard coded administrators in
-sudo -u root echo "%gg-cci-administrators ALL=(ALL)ALL" >> /etc/sudoers
+sudo echo "%gg-cci-administrators ALL=(ALL)ALL" | sudo tee -a /etc/sudoers
 exit
 # will exit program if sudo not given to program originally
 
@@ -200,3 +200,10 @@ sudo rm -rf sssd.sh
 # EXISTING USER ACCOUNTS NEED HOME FOLDER PERMISSION SWITCHED:
 
 # sudo chown -R "web15c:domain users" /home/web15c/
+
+#DONE
+# staticweb1
+
+# https://sourceforge.net/p/webadmin/discussion/600155/thread/5bdffa8d/
+#https://sourceforge.net/p/webadmin/discussion/55378/thread/cc75efed/
+#https://www.virtualmin.com/node/66746
