@@ -139,6 +139,8 @@ sudo pam-auth-update --force
 #user will just hit enter for this
 #BUG: sometimes hangs?
 
+echo "Replacing PAM common-session file."
+sudo mv ~/common-session /etc/pam.d/common-session
 
 
 #automatic bind checker
@@ -199,7 +201,7 @@ sudo rm -rf sssd.sh
 
 # EXISTING USER ACCOUNTS NEED HOME FOLDER PERMISSION SWITCHED:
 
-# sudo chown -R "web15c:domain users" /home/web15c/
+# sudo chown -R "web15c:gg-cci-administrators" /home/web15c/
 
 #DONE
 # staticweb1
