@@ -201,10 +201,9 @@ sudo rm -rf sssd.sh
 
 # EXISTING USER ACCOUNTS NEED HOME FOLDER PERMISSION SWITCHED:
 
-# sudo chown -R "web15c:gg-cci-administrators" /home/web15c/
+# sudo chown -R "web15c:domain users" /home/web15c/
+# sudo chmod 700 /home/web15c
 
-#DONE
-# staticweb1
 
 # https://sourceforge.net/p/webadmin/discussion/600155/thread/5bdffa8d/
 #https://sourceforge.net/p/webadmin/discussion/55378/thread/cc75efed/
