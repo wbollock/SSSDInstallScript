@@ -78,7 +78,7 @@ sudo DEBIAN_FRONTEND=noninteractive apt --yes --force-yes install krb5-user samb
 
 echo ""
 echo "Copying over all SSSD components"
-scp cci_admin2@capricorn.cci.fsu.edu:~/sssd/sssdFiles.tar.gz ~/sssdFiles.tar.gz
+scp cci_admin1@servermgr.cci.fsu.edu:~/sssd/sssdFiles.tar.gz ~/sssdFiles.tar.gz
 #if this scp fails, the entire script fails
 echo "Unzipping .tar.gz..."
 tar -xzf sssdFiles.tar.gz
