@@ -143,6 +143,9 @@ sudo pam-auth-update --force
 echo "Replacing PAM common-session file."
 sudo mv ~/common-session /etc/pam.d/common-session
 
+echo "Replacing PAM common-auth file."
+sudo mv ~/common-auth /etc/pam.d/common-auth
+
 
 #automatic bind checker
 echo -e "${BLUE}Testing your bind with [id km12n]${NC}"
