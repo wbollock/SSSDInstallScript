@@ -22,6 +22,7 @@ function ldap {
   case $1 in
     y|Y) 
     printf "\n"
+     sudo cp /etc/ldap.conf /home/cci_admin1/ldap.conf.SSSDBAK
      sudo apt --yes --force-yes purge libpam-ldap libnss-ldap ldap-utils nscd
     ;;
     n|N) 
