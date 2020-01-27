@@ -188,6 +188,36 @@ sudo echo "%gg-cci-administrators ALL=(ALL)ALL" | sudo tee -a /etc/sudoers
 exit
 # will exit program if sudo not given to program originally
 
+echo -e "${RED} Fixing /home/ permissions and ownership"
+
+# For each folder in /home/*/
+# if user or group = NUMBER, then 
+# sudo chown -R $folder_name:'domain users' /home/*/
+# sudo chmod 700 /home/*/
+
+# DO NOT PARSE LS
+
+for file in /home/*; do
+    
+    user=$(stat -c "%U" $file) # find user of file
+
+    # determine if $file is a number
+    #re='^[0-9]+$'
+    if [[ $user = UNKNOWN ]] ; then
+    echo "$file's permissions are being changed."
+      #then user is a number and should be converted
+      fileExact=$(echo $file | sed -e 's#/home/##g')
+      # purge the /home/ from it
+
+      # Note: echo "/home/web15c/" | sed -e 's#/home/##g'
+      # spits out: web15c/
+
+      sudo chown -R $fileExact:'domain users' $file
+    fi
+    sudo chmod 700 $file
+
+done
+
 
 echo -e "${BLUE}Have a nice day!${NC}"
 sudo rm -rf sssd.sh
