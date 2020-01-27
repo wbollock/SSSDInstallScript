@@ -188,7 +188,7 @@ sudo echo "%gg-cci-administrators ALL=(ALL)ALL" | sudo tee -a /etc/sudoers
 exit
 # will exit program if sudo not given to program originally
 
-echo -e "${RED} Fixing /home/ permissions and ownership"
+echo -e "${RED} Fixing /home/ permissions and ownership${NC}"
 
 # For each folder in /home/*/
 # if user or group = NUMBER, then 
@@ -204,7 +204,7 @@ for file in /home/*; do
     # determine if $file is a number
     #re='^[0-9]+$'
     if [[ $user = UNKNOWN ]] ; then
-    echo "$file's permissions are being changed."
+    echo "$file's permissions are being changed..."
       #then user is a number and should be converted
       fileExact=$(echo $file | sed -e 's#/home/##g')
       # purge the /home/ from it
@@ -217,6 +217,12 @@ for file in /home/*; do
     sudo chmod 700 $file
 
 done
+
+
+
+echo $(ls -l /home/)
+echo -e "${GREEN} Does this look right?${NC}"
+
 
 
 echo -e "${BLUE}Have a nice day!${NC}"
