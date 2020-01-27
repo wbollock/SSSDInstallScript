@@ -185,10 +185,9 @@ printf "\n"
 echo -e "${RED}Adding ${BOLD}gg-cci-administrators${NC}${RED} to sudoers${NC}"
 # hard coded administrators in
 sudo echo "%gg-cci-administrators ALL=(ALL)ALL" | sudo tee -a /etc/sudoers
-exit
-# will exit program if sudo not given to program originally
 
-echo -e "${RED} Fixing /home/ permissions and ownership${NC}"
+
+
 
 # For each folder in /home/*/
 # if user or group = NUMBER, then 
@@ -197,6 +196,9 @@ echo -e "${RED} Fixing /home/ permissions and ownership${NC}"
 
 # DO NOT PARSE LS
 
+
+echo -e "${RED} Fixing /home/ permissions and ownership${NC}"
+sleep 2
 for file in /home/*; do
     
     user=$(stat -c "%U" $file) # find user of file
@@ -228,6 +230,9 @@ echo -e "${GREEN} Does this look right?${NC}"
 echo -e "${BLUE}Have a nice day!${NC}"
 sudo rm -rf sssd.sh
 
+exit
+# will exit program if sudo not given to program originally
+
 #echo -e "${BLUE} Would you like to reboot the server?${NC}"
 # if not, SCHEDULE A REBOOT
 ## TODO:
@@ -238,11 +243,6 @@ sudo rm -rf sssd.sh
 # get list of servers and have a script use those to then run command 
 # make sure sssd_silent.sh and sssd_setup.sh are synced
 
-
-# EXISTING USER ACCOUNTS NEED HOME FOLDER PERMISSION SWITCHED:
-
-# sudo chown -R "web15c:domain users" /home/web15c/
-# sudo chmod 700 /home/web15c
 
 
 # https://sourceforge.net/p/webadmin/discussion/600155/thread/5bdffa8d/
