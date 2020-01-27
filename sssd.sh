@@ -197,7 +197,7 @@ sudo echo "%gg-cci-administrators ALL=(ALL)ALL" | sudo tee -a /etc/sudoers
 # DO NOT PARSE LS
 
 
-echo -e "${RED} Fixing /home/ permissions and ownership${NC}"
+echo -e "${RED}Fixing /home/ permissions and ownership${NC}"
 sleep 2
 for file in /home/*; do
     
@@ -222,7 +222,7 @@ done
 
 
 
-echo $(ls -l /home/)
+echo $(ls -l1 /home/)
 echo -e "${GREEN} Does this look right?${NC}"
 
 
@@ -230,7 +230,7 @@ echo -e "${GREEN} Does this look right?${NC}"
 echo -e "${BLUE}Have a nice day!${NC}"
 sudo rm -rf sssd.sh
 
-exit
+
 # will exit program if sudo not given to program originally
 
 #echo -e "${BLUE} Would you like to reboot the server?${NC}"
