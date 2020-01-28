@@ -231,12 +231,8 @@ echo -e "${BLUE}Have a nice day!${NC}"
 sudo rm -rf sssd.sh
 
 
-# will exit program if sudo not given to program originally
-
-#echo -e "${BLUE} Would you like to reboot the server?${NC}"
-# if not, SCHEDULE A REBOOT
-## TODO:
-# ask if you'd like to reboot the server
+#REALMD:
+#sudo realm join fsu.edu -U adm-cci-web15c --install=/
 
 # TODO:
 # how to run bash commands remotely (update servers remotely)
