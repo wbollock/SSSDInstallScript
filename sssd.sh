@@ -20,8 +20,8 @@ function ldap {
   case $1 in
     y|Y) 
     printf "\n"
-     sudo cp /etc/ldap.conf /home/cci_admin1/ldap.conf.SSSDBAK
-     sudo apt --yes --yes --allow-downgrades --allow-remove-essential --allow-change-held-packages purge libpam-ldap libnss-ldap ldap-utils nscd
+     sudo cp /etc/ldap.conf /etc/ldap.conf.SSSDBAK
+     sudo apt --yes --allow-downgrades --allow-remove-essential --allow-change-held-packages purge libpam-ldap libnss-ldap ldap-utils nscd
     ;;
     n|N) 
     printf "\n"
@@ -43,6 +43,7 @@ BLUE='\033[0;34m'
 BOLD="\033[1m"
 YELLOW='\033[0;33m'
 echo -e "${BLUE}Setting up SSSD. ${BOLD}Please run this program with sudo.${NC}"
+echo -e "${BLUE}There will be a log avaiable in /tmp/sssd_sh.log${NC}"
 echo -e "${BLUE}${BOLD}**Hit 'Enter' at all Ubuntu system prompts**. Follow script prompts in ${NC}${RED}red${NC} ${BLUE}${BOLD}closely.${NC}"
 #"here document" for use with ASCII art
 #used for chaning text color
@@ -72,7 +73,7 @@ if [ -e /etc/ldap.conf ]; then
 
 printf "\n"
 echo -e "${BLUE}Installing necessary programs - kerberos, samba, sssd, chrony${NC}"
-sudo DEBIAN_FRONTEND=noninteractive apt --yes --force-yes install krb5-user samba sssd chrony 
+sudo DEBIAN_FRONTEND=noninteractive apt --yes install krb5-user samba sssd chrony 
 #DEBIAN_FRONTEND=noninteractive gets rid of the purple package management screen
 
 echo ""
@@ -116,6 +117,8 @@ echo ""
 printf "${RED}Please enter your ADM FSUID you'd like to use when binding: ${NC}"
 read -r FSUID
 
+echo "$FSUID used as FSUID when binding" | tee -a /tmp/sssd_sh.log
+
 echo -e "${RED}Please enter in your password again. Authenticating to domain...${NC}"
 sudo net ads join -U "$FSUID"@fsu.edu 
 echo -e "${YELLOW}It's OK if you get an NT_STATUS_UNSUCCESSFUL error. This does not affect binding.${NC}"
@@ -134,14 +137,14 @@ sudo mv ~/nsswitch.conf /etc/nsswitch.conf
 
 
 echo -e "${RED}**ATTENTION**: Use the spacebar to select \'Create home directories on login\' on the next screen${NC}"
-sleep 7
+sleep 5
 
 
 
 echo "Running pam-auth-update to force SSSD usage, instead of LDAP"
 sudo pam-auth-update --force
-#user will just hit enter for this
-#BUG: sometimes hangs?
+# make sure to select create home directories
+
 
 echo "Replacing PAM common-session file."
 sudo mv ~/common-session /etc/pam.d/common-session
@@ -151,16 +154,16 @@ sudo mv ~/common-auth /etc/pam.d/common-auth
 
 
 #automatic bind checker
-echo -e "${BLUE}Testing your bind with [id km12n]${NC}"
-# if the output of id km12n has a sufficient output, then binding works!
-var="$(id km12n)"
+echo -e "${BLUE}Testing your bind with [id cci-service]${NC}"
+# if the output of id cci-service has a sufficient output, then binding works!
+var="$(id cci-service)"
 id_array=("$var")
 id_array_length=${#id_array}
-if [ $id_array_length -gt 27 ]; then
-  #27 because id km12n that doesn't work is ~26 characters
-  echo -e "${GREEN}Bind ${BOLD}succeeded${NC}${GREEN}. id km12n returned sufficent length.${NC}"
+if [ $id_array_length -gt 40 ]; then
+  # 40 because id cci-service that doesn't work is 31 characters
+  echo -e "${GREEN}Bind ${BOLD}succeeded${NC}${GREEN} (id cci-service returned sufficent length)${NC}"
   else
-  echo -e "${RED}Bind ${BOLD}failed${NC}${RED}. id k12mn was too short.${NC}"
+  echo -e "${RED}Bind ${BOLD}failed${NC}${RED} (id cci-service was too short)${NC}"
 fi
 
 while :
@@ -182,12 +185,12 @@ do
 done
 
 echo ""
-echo -e "${GREEN}All done. Binding complete.${NC} Please test with:"
-echo "su - FSUID"
+echo -e "${GREEN}All done. Binding complete.${NC}"
+
 printf "\n"
-echo -e "${RED}Adding ${BOLD}gg-cci-administrators${NC}${RED} to sudoers${NC}"
+echo -e "${BLUE}Adding ${BOLD}gg-cci-administrators${NC}${BLUE} to sudoers${NC}"
 # hard coded administrators in
-sudo echo "%gg-cci-administrators ALL=(ALL)ALL" | sudo tee -a /etc/sudoers
+echo "%gg-cci-administrators ALL=(ALL)ALL" | sudo tee -a /etc/sudoers
 
 
 
@@ -228,21 +231,7 @@ for file in /home/*; do
         echo "filter_groups = $user" | sudo tee -a /etc/sssd/sssd.conf
         
     fi
-
-    # else
-   
-
-    #else, if user is NOT AD, pipe that nss filter_user
-    
-
 done
-
-
-
-#echo $(ls -l1 /home/)
-#echo -e "${GREEN} Does this look right?${NC}"
-
-
 
 echo -e "${BLUE}Have a nice day!${NC}"
 sudo rm -rf sssd.sh
