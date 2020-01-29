@@ -5,10 +5,8 @@
 function upgrade {
   case $1 in  
   y|Y) 
-  sudo apt --yes --force-yes update
-  sudo apt --yes --force-yes upgrade
-  sudo apt --yes --force-yes dist-upgrade
-  sudo apt-get --yes --force-yes autoremove
+  sudo apt --yes --allow-downgrades --allow-remove-essential --allow-change-held-packages update
+  sudo apt --yes --allow-downgrades --allow-remove-essential --allow-change-held-packages upgrade
   ;;
     n|N) 
     printf "\n"
@@ -23,7 +21,7 @@ function ldap {
     y|Y) 
     printf "\n"
      sudo cp /etc/ldap.conf /home/cci_admin1/ldap.conf.SSSDBAK
-     sudo apt --yes --force-yes purge libpam-ldap libnss-ldap ldap-utils nscd
+     sudo apt --yes --yes --allow-downgrades --allow-remove-essential --allow-change-held-packages purge libpam-ldap libnss-ldap ldap-utils nscd
     ;;
     n|N) 
     printf "\n"
@@ -135,6 +133,11 @@ echo "Overriding old nsswitch.conf"
 sudo mv ~/nsswitch.conf /etc/nsswitch.conf
 
 
+echo -e "${RED}**ATTENTION**: Use the spacebar to select \'Create home directories on login\' on the next screen${NC}"
+sleep 7
+
+
+
 echo "Running pam-auth-update to force SSSD usage, instead of LDAP"
 sudo pam-auth-update --force
 #user will just hit enter for this
@@ -197,7 +200,7 @@ sudo echo "%gg-cci-administrators ALL=(ALL)ALL" | sudo tee -a /etc/sudoers
 # DO NOT PARSE LS
 
 
-echo -e "${RED}Fixing /home/ permissions and ownership${NC}"
+echo -e "${BLUE}Fixing /home/ permissions and ownership${NC}"
 sleep 2
 for file in /home/*; do
     
@@ -206,7 +209,7 @@ for file in /home/*; do
     # determine if $file is a number
     #re='^[0-9]+$'
     if [[ $user = UNKNOWN ]] ; then
-    echo "$file's permissions are being changed..."
+    echo -e "${GREEN}Domain user $user's permissions are being corrected...${NC}" | tee -a /tmp/sssd_sh.log
       #then user is a number and should be converted
       fileExact=$(echo $file | sed -e 's#/home/##g')
       # purge the /home/ from it
@@ -215,15 +218,29 @@ for file in /home/*; do
       # spits out: web15c/
 
       sudo chown -R $fileExact:'domain users' $file
+      sudo chmod 700 $file 
+    else
+        # this section will prevent nss/sssd from associating local users w/ AD equivalants
+        echo -e "${BLUE}Adding local user $user to sssd.conf nss filter${NC}"
+        echo "# Filtered users generated from sssd.sh" | sudo tee -a /etc/sssd/sssd.conf
+        echo "[nss]" | sudo tee -a /etc/sssd/sssd.conf
+        echo "filter_users = $user" | sudo tee -a /etc/sssd/sssd.conf
+        echo "filter_groups = $user" | sudo tee -a /etc/sssd/sssd.conf
+        
     fi
-    sudo chmod 700 $file
+
+    # else
+   
+
+    #else, if user is NOT AD, pipe that nss filter_user
+    
 
 done
 
 
 
-echo $(ls -l1 /home/)
-echo -e "${GREEN} Does this look right?${NC}"
+#echo $(ls -l1 /home/)
+#echo -e "${GREEN} Does this look right?${NC}"
 
 
 
