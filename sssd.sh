@@ -36,6 +36,9 @@ function ldap {
 #command line arguments
 #./sssd.sh y n web15c
 
+logLocation=/var/log/sssdInstall.log
+
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
@@ -43,7 +46,7 @@ BLUE='\033[0;34m'
 BOLD="\033[1m"
 YELLOW='\033[0;33m'
 echo -e "${BLUE}Setting up SSSD. ${BOLD}Please run this program with sudo.${NC}"
-echo -e "${BLUE}There will be a log avaiable in /tmp/sssd_sh.log${NC}"
+echo -e "${BLUE}There will be a log avaiable in $logLocation ${NC}"
 echo -e "${BLUE}${BOLD}**Hit 'Enter' at all Ubuntu system prompts**. Follow script prompts in ${NC}${RED}red${NC} ${BLUE}${BOLD}closely.${NC}"
 #"here document" for use with ASCII art
 #used for chaning text color
@@ -117,7 +120,7 @@ echo ""
 printf "${RED}Please enter your ADM FSUID you'd like to use when binding: ${NC}"
 read -r FSUID
 
-echo "$FSUID used as FSUID when binding" | tee -a /tmp/sssd_sh.log
+echo "$FSUID used as FSUID when binding" | tee -a $logLocation
 
 echo -e "${RED}Please enter in your password again. Authenticating to domain...${NC}"
 sudo net ads join -U "$FSUID"@fsu.edu 
@@ -137,7 +140,7 @@ sudo mv ~/nsswitch.conf /etc/nsswitch.conf
 
 
 echo -e "${RED}**ATTENTION**: Use the spacebar to select \'Create home directories on login\' on the next screen${NC}"
-sleep 5
+sleep 10
 
 
 
@@ -205,6 +208,15 @@ echo "%gg-cci-administrators ALL=(ALL)ALL" | sudo tee -a /etc/sudoers
 
 echo -e "${BLUE}Fixing /home/ permissions and ownership${NC}"
 sleep 2
+
+# https://linuxhandbook.com/bash-split-string/
+        # every standard user/group to filter
+        filterString="root,www-data,cci_admin1,sshd,snmp,bin,clamav,daemon,ntp,postfix,Debian-exim,amavis,backup,bind,debian-spamd,dovecot,dovenull,games,gnats,irc,landscape,libuuid,list,lp,mail,man,messagebus,mysql,nagios,news,postgrey,proxy,smmsp,smmta,statd,sync,sys,syslog,uucp,vmail,whoopsie"
+        IFS=',' read -ra filterArray <<< $filterString
+
+
+# convert string to array, delimited by the commas
+
 for file in /home/*; do
     
     user=$(stat -c "%U" $file) # find user of file
@@ -212,11 +224,11 @@ for file in /home/*; do
     # determine if $file is a number
     #re='^[0-9]+$'
     if [[ $user = UNKNOWN ]] ; then
-    echo -e "${GREEN}Domain user $user's permissions are being corrected...${NC}" | tee -a /tmp/sssd_sh.log
+    
       #then user is a number and should be converted
       fileExact=$(echo $file | sed -e 's#/home/##g')
       # purge the /home/ from it
-
+      echo -e "${GREEN}Domain user $fileExact's home directory permissions are being corrected...${NC}" | tee -a $logLocation
       # Note: echo "/home/web15c/" | sed -e 's#/home/##g'
       # spits out: web15c/
 
@@ -224,17 +236,56 @@ for file in /home/*; do
       sudo chmod 700 $file 
     else
         # this section will prevent nss/sssd from associating local users w/ AD equivalants
-        echo -e "${BLUE}Adding local user $user to sssd.conf nss filter${NC}"
-        echo "# Filtered users generated from sssd.sh" | sudo tee -a /etc/sssd/sssd.conf
-        echo "[nss]" | sudo tee -a /etc/sssd/sssd.conf
-        echo "filter_users = $user" | sudo tee -a /etc/sssd/sssd.conf
-        echo "filter_groups = $user" | sudo tee -a /etc/sssd/sssd.conf
+        #######
+        # hard code in every script the ones we know we want to block
+        # then add the local users somehow smart
+
+        filterArray+=("$user")
+       # add new items to array - in the loop
+       # then 
+
+
+
+        # old block of code, didn't work as too many lines in the config
+        #echo -e "${BLUE}Adding local user $user to sssd.conf nss filter${NC}"
+        #echo "# Filtered users generated from sssd.sh" | sudo tee -a /etc/sssd/sssd.conf
+        #echo "[nss]" | sudo tee -a /etc/sssd/sssd.conf
+        #echo "filter_users = $user" | sudo tee -a /etc/sssd/sssd.conf
+        #echo "filter_groups = $user" | sudo tee -a /etc/sssd/sssd.conf
         
     fi
+        
+        
+
+
+
+
 done
 
-echo -e "${BLUE}Have a nice day!${NC}"
-sudo rm -rf sssd.sh
+# convert back to string outside of loop at append filter_user / filter_group to the file
+
+
+
+        printf -v filterStringFull ',%s' "${filterArray[@]}"
+
+
+      # get rid of leading ,
+      filterStringFull=${filterStringFull:1}
+        # the whole NSS section of the conf file is built from here. It should not be hard coded into sssd.conf
+
+      echo "# Filtered users generated from sssd.sh" | sudo tee -a /etc/sssd/sssd.conf $logLocation
+      echo "[nss]" | sudo tee -a /etc/sssd/sssd.conf $logLocation
+      echo "reconnection_retries = 3" | sudo tee -a /etc/sssd/sssd.conf $logLocation
+      echo "filter_users = $filterStringFull" | sudo tee -a /etc/sssd/sssd.conf $logLocation
+      echo "filter_groups = $filterStringFull" | sudo tee -a /etc/sssd/sssd.conf $logLocation
+
+    
+    sudo rm sssd.sh
+
+    sudo systemctl restart sssd
+    sudo systemctl status sssd
+
+    echo -e "${BLUE}Have a nice day!${NC}"
 
 
 #REALMD:
