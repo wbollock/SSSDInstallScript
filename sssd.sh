@@ -220,7 +220,7 @@ sleep 2
 for file in /home/*; do
     
     user=$(stat -c "%U" $file) # find user of file
-
+    group=$(stat -c "%G" $file)
     # determine if $file is a number
     #re='^[0-9]+$'
     if [[ $user = UNKNOWN ]] ; then
@@ -234,7 +234,11 @@ for file in /home/*; do
 
       sudo chown -R $fileExact:'domain users' $file
       sudo chmod 700 $file 
+    elif [ "$group" == "domain users" ] ; then
+      test
+      # skip SSSD users
     else
+
         # this section will prevent nss/sssd from associating local users w/ AD equivalants
         #######
         # hard code in every script the ones we know we want to block
