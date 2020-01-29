@@ -211,7 +211,7 @@ sleep 2
 
 # https://linuxhandbook.com/bash-split-string/
         # every standard user/group to filter
-        filterString="root,www-data,cci_admin1,sshd,snmp,bin,clamav,daemon,ntp,postfix,Debian-exim,amavis,backup,bind,debian-spamd,dovecot,dovenull,games,gnats,irc,landscape,libuuid,list,lp,mail,man,messagebus,mysql,nagios,news,postgrey,proxy,smmsp,smmta,statd,sync,sys,syslog,uucp,vmail,whoopsie"
+        filterString="root,www-data,sshd,snmp,bin,clamav,daemon,ntp,postfix,Debian-exim,amavis,backup,bind,debian-spamd,dovecot,dovenull,games,gnats,irc,landscape,libuuid,list,lp,mail,man,messagebus,mysql,nagios,news,postgrey,proxy,smmsp,smmta,statd,sync,sys,syslog,uucp,vmail,whoopsie"
         IFS=',' read -ra filterArray <<< $filterString
 
 
