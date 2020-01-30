@@ -39,10 +39,9 @@ function ldap {
 logLocation=/var/log/sssdInstall.log
 
 # Pipe Date into start of log
-echo "" | tee -a $logLocation
-echo "" | tee -a $logLocation
 echo "SSSD Install Log" | tee -a $logLocation
 echo $(date) | tee -a $logLocation
+echo "" | tee -a $logLocation
 
 
 # used for chaning text color
@@ -268,13 +267,16 @@ echo "reconnection_retries = 3" | sudo tee -a /etc/sssd/sssd.conf $logLocation
 echo "filter_users = $filterStringFull" | sudo tee -a /etc/sssd/sssd.conf $logLocation
 echo "filter_groups = $filterStringFull" | sudo tee -a /etc/sssd/sssd.conf $logLocation
 
+echo "" | tee -a $logLocation
+echo "" | tee -a $logLocation
+
     
 sudo rm sssd.sh
 
 sudo systemctl restart sssd
 sudo systemctl status sssd
 
-echo -e "${BLUE}Have a nice day!${NC}"
+echo -e "${BLUE}Have a nice day! **Do not forget to restore ssh access to users**${NC}"
 
 
 
