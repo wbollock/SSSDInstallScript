@@ -1,12 +1,14 @@
 #!/bin/bash
 # made by William Bollock, CCI Helpdesk, April 2019
-# check https://help.ubuntu.com/lts/serverguide/sssd-ad.html or the SSSD wiki page for more details
 # Purpose: setup SSSD for AD auth on Ubuntu servers (tested on 16.04)
+
+
 function upgrade {
   case $1 in  
   y|Y) 
   sudo apt --yes --allow-downgrades --allow-remove-essential --allow-change-held-packages update
   sudo apt --yes --allow-downgrades --allow-remove-essential --allow-change-held-packages upgrade
+  # used to update system
   ;;
     n|N) 
     printf "\n"
@@ -22,6 +24,7 @@ function ldap {
     printf "\n"
      sudo cp /etc/ldap.conf /etc/ldap.conf.SSSDBAK
      sudo apt --yes --allow-downgrades --allow-remove-essential --allow-change-held-packages purge libpam-ldap libnss-ldap ldap-utils nscd
+     # used to backup and remove ldap files
     ;;
     n|N) 
     printf "\n"
@@ -32,12 +35,17 @@ function ldap {
     
 }
 
-
-#command line arguments
-#./sssd.sh y n web15c
-
+# CONFIG VARIABLES
 logLocation=/var/log/sssdInstall.log
 
+# Pipe Date into start of log
+echo "" | tee -a $logLocation
+echo "" | tee -a $logLocation
+echo "SSSD Install Log" | tee -a $logLocation
+echo $(date) | tee -a $logLocation
+
+
+# used for chaning text color
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -45,11 +53,12 @@ NC='\033[0m' # No Color
 BLUE='\033[0;34m'
 BOLD="\033[1m"
 YELLOW='\033[0;33m'
+
 echo -e "${BLUE}Setting up SSSD. ${BOLD}Please run this program with sudo.${NC}"
 echo -e "${BLUE}There will be a log avaiable in $logLocation ${NC}"
 echo -e "${BLUE}${BOLD}**Hit 'Enter' at all Ubuntu system prompts**. Follow script prompts in ${NC}${RED}red${NC} ${BLUE}${BOLD}closely.${NC}"
-#"here document" for use with ASCII art
-#used for chaning text color
+# "here document" for use with ASCII art
+
 
 cat << "HelpDesk"
    _____ _____ _____   _    _      _       _____            _    
@@ -82,7 +91,8 @@ sudo DEBIAN_FRONTEND=noninteractive apt --yes install krb5-user samba sssd chron
 echo ""
 echo "Copying over all SSSD components"
 scp cci_admin1@servermgr.cci.fsu.edu:~/sssd/sssdFiles.tar.gz ~/sssdFiles.tar.gz
-#if this scp fails, the entire script fails
+# if this scp fails, the entire script fails
+# TODO: replace this method with a private git repo and git clone
 echo "Unzipping .tar.gz..."
 tar -xzf sssdFiles.tar.gz
 
@@ -105,14 +115,14 @@ echo "Onto SSSD.conf. Replacing and reuploading."
 sudo rm -f /etc/sssd/sssd.conf
 sudo mv ~/sssd.conf /etc/sssd/sssd.conf
 
-#note that sssd.conf is the file you want to edit for changing who/what groups can log onto the server
+# note that sssd.conf is the file you want to edit for changing who/what groups can log onto the server
 
 echo "Changing permissions for sssd.conf"
-
+# must be 600
 sudo chown root:root /etc/sssd/sssd.conf
 sudo chmod 600 /etc/sssd/sssd.conf
 
-echo -e "${GREEN}Great, now we're ready to restart some services.${NC}"
+echo -e "${GREEN}Great, now we're ready to restart chrony, smbd, and nmbd.${NC}"
 sudo systemctl restart chrony.service
 sudo systemctl restart smbd.service nmbd.service
 echo ""
@@ -123,6 +133,9 @@ read -r FSUID
 echo "$FSUID used as FSUID when binding" | tee -a $logLocation
 
 echo -e "${RED}Please enter in your password again. Authenticating to domain...${NC}"
+# REALMD:
+# sudo realm join fsu.edu -U adm-cci-web15c --install=/
+# another alternative to this
 sudo net ads join -U "$FSUID"@fsu.edu 
 echo -e "${YELLOW}It's OK if you get an NT_STATUS_UNSUCCESSFUL error. This does not affect binding.${NC}"
 echo -e "${YELLOW}However, a Logon Failure means the binding has failed.${NC}"
@@ -210,98 +223,59 @@ echo -e "${BLUE}Fixing /home/ permissions and ownership${NC}"
 sleep 2
 
 # https://linuxhandbook.com/bash-split-string/
-        # every standard user/group to filter
-        filterString="root,www-data,sshd,snmp,bin,clamav,daemon,ntp,postfix,Debian-exim,amavis,backup,bind,debian-spamd,dovecot,dovenull,games,gnats,irc,landscape,libuuid,list,lp,mail,man,messagebus,mysql,nagios,news,postgrey,proxy,smmsp,smmta,statd,sync,sys,syslog,uucp,vmail,whoopsie"
-        IFS=',' read -ra filterArray <<< $filterString
+# every standard user/group to filter
+filterString="root,www-data,sshd,snmp,bin,clamav,daemon,ntp,postfix,Debian-exim,amavis,backup,bind,debian-spamd,dovecot,dovenull,games,gnats,irc,landscape,libuuid,list,lp,mail,man,messagebus,mysql,nagios,news,postgrey,proxy,smmsp,smmta,statd,sync,sys,syslog,uucp,vmail,whoopsie"
+IFS=',' read -ra filterArray <<< $filterString
 
 
 # convert string to array, delimited by the commas
 
 for file in /home/*; do
     
-    user=$(stat -c "%U" $file) # find user of file
+    user=$(stat -c "%U" $file) # find user of filesudo
     group=$(stat -c "%G" $file)
-    # determine if $file is a number
-    #re='^[0-9]+$'
-    if [[ $user = UNKNOWN ]] ; then
     
+    # if the user part of the home folder is a number (UNKNOWN), then we know it's an existing ldap user
+    if [[ $user = UNKNOWN ]] ; then
       #then user is a number and should be converted
       fileExact=$(echo $file | sed -e 's#/home/##g')
       # purge the /home/ from it
       echo -e "${GREEN}Domain user $fileExact's home directory permissions are being corrected...${NC}" | tee -a $logLocation
       # Note: echo "/home/web15c/" | sed -e 's#/home/##g'
       # spits out: web15c/
-
       sudo chown -R $fileExact:'domain users' $file
       sudo chmod 700 $file 
     elif [ "$group" == "domain users" ] ; then
       test
-      # skip SSSD users
+      # skip SSSD users that already have their proper group
     else
-
-        # this section will prevent nss/sssd from associating local users w/ AD equivalants
-        #######
-        # hard code in every script the ones we know we want to block
-        # then add the local users somehow smart
-
+      # all other users must be local accounts
         filterArray+=("$user")
        # add new items to array - in the loop
-       # then 
-
-
-
-        # old block of code, didn't work as too many lines in the config
-        #echo -e "${BLUE}Adding local user $user to sssd.conf nss filter${NC}"
-        #echo "# Filtered users generated from sssd.sh" | sudo tee -a /etc/sssd/sssd.conf
-        #echo "[nss]" | sudo tee -a /etc/sssd/sssd.conf
-        #echo "filter_users = $user" | sudo tee -a /etc/sssd/sssd.conf
-        #echo "filter_groups = $user" | sudo tee -a /etc/sssd/sssd.conf
-        
     fi
-        
-        
-
-
-
-
 done
 
 # convert back to string outside of loop at append filter_user / filter_group to the file
+printf -v filterStringFull ',%s' "${filterArray[@]}"
 
+# get rid of leading ,
+filterStringFull=${filterStringFull:1}
 
-
-        printf -v filterStringFull ',%s' "${filterArray[@]}"
-
-
-      # get rid of leading ,
-      filterStringFull=${filterStringFull:1}
-        # the whole NSS section of the conf file is built from here. It should not be hard coded into sssd.conf
-
-      echo "# Filtered users generated from sssd.sh" | sudo tee -a /etc/sssd/sssd.conf $logLocation
-      echo "[nss]" | sudo tee -a /etc/sssd/sssd.conf $logLocation
-      echo "reconnection_retries = 3" | sudo tee -a /etc/sssd/sssd.conf $logLocation
-      echo "filter_users = $filterStringFull" | sudo tee -a /etc/sssd/sssd.conf $logLocation
-      echo "filter_groups = $filterStringFull" | sudo tee -a /etc/sssd/sssd.conf $logLocation
+# the whole NSS section of the conf file is built from here. It should not be hard coded into sssd.conf
+echo "# Filtered users generated from sssd.sh" | sudo tee -a /etc/sssd/sssd.conf $logLocation
+echo "[nss]" | sudo tee -a /etc/sssd/sssd.conf $logLocation
+echo "reconnection_retries = 3" | sudo tee -a /etc/sssd/sssd.conf $logLocation
+echo "filter_users = $filterStringFull" | sudo tee -a /etc/sssd/sssd.conf $logLocation
+echo "filter_groups = $filterStringFull" | sudo tee -a /etc/sssd/sssd.conf $logLocation
 
     
-    sudo rm sssd.sh
+sudo rm sssd.sh
 
-    sudo systemctl restart sssd
-    sudo systemctl status sssd
+sudo systemctl restart sssd
+sudo systemctl status sssd
 
-    echo -e "${BLUE}Have a nice day!${NC}"
-
-
-#REALMD:
-#sudo realm join fsu.edu -U adm-cci-web15c --install=/
-
-# TODO:
-# how to run bash commands remotely (update servers remotely)
-# get list of servers and have a script use those to then run command 
-# make sure sssd_silent.sh and sssd_setup.sh are synced
+echo -e "${BLUE}Have a nice day!${NC}"
 
 
 
-# https://sourceforge.net/p/webadmin/discussion/600155/thread/5bdffa8d/
-#https://sourceforge.net/p/webadmin/discussion/55378/thread/cc75efed/
-#https://www.virtualmin.com/node/66746
+
