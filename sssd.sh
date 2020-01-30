@@ -276,7 +276,7 @@ sudo rm sssd.sh
 sudo systemctl restart sssd
 sudo systemctl status sssd
 
-echo -e "${BLUE}Have a nice day! **Do not forget to restore ssh access to users**${NC}"
+echo -e "${BLUE}Have a nice day! **Don't forget to add SSH access for groups**${NC}"
 
 
 
